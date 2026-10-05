@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Калькулятор пропускной способности по Шеннону-Хартли</title>
+  
+  <!-- ==========================================
+       СТИЛИ ПРИЛОЖЕНИЯ (CSS)
+       Классический академический стиль в светлой теме
+       ========================================== -->
+  <style>
+    :root {
+      --bg-page: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --border-color: #cbd5e1;
+      --border-dark: #94a3b8;
+      
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      
+      /* Классическая инженерная палитра */
+      --primary: #1e40af;       /* Классический глубокий синий */
+      --primary-hover: #1d4ed8;
+      --accent-real: #047857;   /* Академический изумрудный */
+      --accent-warn: #b45309;   /* Спокойный янтарный */
+      
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Georgia", serif, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      line-height: 1.55;
+      padding: 32px 16px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Шапка в академическом стиле */
+    header {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-top: 4px solid var(--primary);
+      border-radius: var(--radius-md);
+      padding: 24px 32px;
+      box-shadow: var(--shadow-card);
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 6px;
+      letter-spacing: -0.01em;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* Двухколоночная сетка */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 860px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Карточки разделов */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .card h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 18px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--bg-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Строгие кнопки-пресеты */
+    .presets-container {
+      margin-bottom: 20px;
+      padding: 12px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+    }
+
+    .presets-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .preset-btn {
+      background: #ffffff;
+      color: var(--text-main);
+      border: 1px solid var(--border-dark);
+      padding: 5px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+
+    .preset-btn:hover {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    /* Поля ввода и слайдеры */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+
+    label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .val-display {
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 0.95rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .inputs-pair {
+      display: grid;
+      grid-template-columns: 1fr 90px;
+      gap: 12px;
+      align-items: center;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      accent-color: var(--primary);
+      background: var(--border-color);
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      background: #ffffff;
+      color: var(--text-main);
+      border: 1px solid var(--border-dark);
+      border-radius: var(--radius-sm);
+      padding: 6px 8px;
+      font-size: 0.9rem;
+      text-align: right;
+      font-weight: 600;
+    }
+
+    input[type="number"]:focus {
+      outline: 2px solid var(--primary);
+      border-color: var(--primary);
+    }
+
+    .hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Карточки метрик (Результаты) */
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .metric-card {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      text-align: center;
+    }
+
+    .metric-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .metric-val {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--text-main);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-val.primary { color: var(--primary); }
+    .metric-val.green { color: var(--accent-real); }
+    .metric-val.amber { color: var(--accent-warn); }
+
+    .metric-unit {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Блок статуса и прогресс-бар */
+    .status-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-left: 4px solid var(--primary);
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 18px;
+    }
+
+    .status-title {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #1e3a8a;
+      margin-bottom: 3px;
+    }
+
+    .status-desc {
+      font-size: 0.82rem;
+      color: #1e40af;
+    }
+
+    .bar-container {
+      margin-top: 8px;
+      background: #dbeafe;
+      height: 6px;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: var(--primary);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* График */
+    .canvas-wrapper {
+      margin-top: 14px;
+    }
+
+    .canvas-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      margin-bottom: 6px;
+    }
+
+    .canvas-legend {
+      display: flex;
+      gap: 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--text-muted);
+    }
+
+    .legend-box {
+      width: 12px;
+      height: 3px;
+      border-radius: 1px;
+    }
+
+    canvas {
+      width: 100%;
+      height: 200px;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      display: block;
+    }
+
+    /* Таблица чувствительности */
+    .table-container {
+      overflow-x: auto;
+      max-height: 220px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      margin-top: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: right;
+      font-size: 0.82rem;
+    }
+
+    th, td {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th:first-child, td:first-child {
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--bg-subtle);
+      color: var(--text-main);
+      font-weight: 700;
+      position: sticky;
+      top: 0;
+      border-bottom: 2px solid var(--border-dark);
+    }
+
+    tr:nth-child(even) {
+      background-color: #fbfcfe;
+    }
+
+    tr.active-row {
+      background-color: #dbeafe !important;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    /* Блок теории и формул */
+    .theory-box {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .theory-box code {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--primary);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 0.82rem;
+      font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-right: 6px;
+      border: 1px solid transparent;
+    }
+
+    .badge-2g { background: #e2e8f0; color: #334155; border-color: #cbd5e1; }
+    .badge-3g { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+    .badge-4g { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Шапка страницы -->
+    <header>
+      <h1>Калькулятор пропускной способности по Шеннону-Хартли</h1>
+      <p>
+        Инженерный расчет теоретической ёмкости радиоканала, удельной спектральной эффективности и реальной скорости с учетом накладных расходов.
+      </p>
+    </header>
+
+    <div class="grid">
+      
+      <!-- ПАНЕЛЬ ВВОДА ПАРАМЕТРОВ -->
+      <section class="card">
+        <h2>Входные параметры канала</h2>
+
+        <!-- Быстрые шаблоны стандартов связи -->
+        <div class="presets-container">
+          <div class="presets-label">Типовые профили стандартов связи:</div>
+          <div class="presets">
+            <button type="button" class="preset-btn" onclick="applyPreset(0.2, 10, 0.7)">2G (GSM)</button>
+            <button type="button" class="preset-btn" onclick="applyPreset(5, 10, 0.8)">3G (UMTS 5 МГц)</button>
+            <button type="button" class="preset-btn" onclick="applyPreset(20, 20, 0.5)">4G (LTE 20 МГц)</button>
+            <button type="button" class="preset-btn" onclick="applyPreset(100, 20, 0.6)">4G (CA 100 МГц)</button>
+            <button type="button" class="preset-btn" onclick="applyPreset(80, 25, 0.65)">Wi-Fi (80 МГц)</button>
+          </div>
+        </div>
+
+        <!-- 1. Полоса B -->
+        <div class="form-group">
+          <div class="form-label-row">
+            <label for="bw-num">Ширина полосы частот (B):</label>
+            <span class="val-display" id="bw-val-lbl">20 МГц</span>
+          </div>
+          <div class="inputs-pair">
+            <input type="range" id="bw-range" min="0.1" max="100" step="0.1" value="20" />
+            <input type="number" id="bw-num" min="0.01" max="1000" step="0.1" value="20" />
+          </div>
+          <div class="hint">0.2 МГц (GSM), 5 МГц (3G), 20 МГц (LTE), 100 МГц (LTE-Advanced).</div>
+        </div>
+
+        <!-- 2. Отношение сигнал/шум SNR -->
+        <div class="form-group">
+          <div class="form-label-row">
+            <label for="snr-num">Отношение сигнал/шум (SNR):</label>
+            <span class="val-display" id="snr-val-lbl">20 dB</span>
+          </div>
+          <div class="inputs-pair">
+            <input type="range" id="snr-range" min="-10" max="40" step="0.5" value="20" />
+            <input type="number" id="snr-num" min="-20" max="60" step="0.5" value="20" />
+          </div>
+          <div class="hint">Диапазон: 0 dB (слабый прием) … 25–30 dB (высокое качество радиоэфира).</div>
+        </div>
+
+        <!-- 3. Коэффициент потерь k -->
+        <div class="form-group">
+          <div class="form-label-row">
+            <label for="k-num">Коэффициент эффективности (k):</label>
+            <span class="val-display" id="k-val-lbl">0.50</span>
+          </div>
+          <div class="inputs-pair">
+            <input type="range" id="k-range" min="0.1" max="1.0" step="0.05" value="0.5" />
+            <input type="number" id="k-num" min="0.05" max="1.0" step="0.05" value="0.5" />
+          </div>
+          <div class="hint">1.0 — чистая теория, 0.7 — отличные условия, 0.5 — типичные накладные расходы.</div>
+        </div>
+
+        <div class="theory-box" style="margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+          <strong>Теорема Шеннона:</strong> <code>C = B × log₂(1 + SNR_lin)</code><br>
+          где <code>SNR_lin = 10^(SNR_dB / 10)</code>, а практическая скорость <code>C_real = k × C</code>.
+        </div>
+      </section>
+
+      <!-- ПАНЕЛЬ РАСЧЕТОВ -->
+      <section class="card">
+        <h2>Результаты моделирования</h2>
+
+        <!-- Плитки метрик -->
+        <div class="results-grid">
+          <div class="metric-card">
+            <div class="metric-title">Линейный SNR</div>
+            <div class="metric-val" id="res-snr-lin">100.0</div>
+            <div class="metric-unit">раз(а)</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-title">Удельная скор. (η)</div>
+            <div class="metric-val amber" id="res-eta">6.66</div>
+            <div class="metric-unit">бит/с/Гц</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-title">Теор. емкость (C)</div>
+            <div class="metric-val primary" id="res-c-theor">133.2</div>
+            <div class="metric-unit">Мбит/с</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-title">Реальная скор. (C_real)</div>
+            <div class="metric-val green" id="res-c-real">66.6</div>
+            <div class="metric-unit">Мбит/с</div>
+          </div>
+        </div>
+
+        <!-- Оценка поколения -->
+        <div class="status-box">
+          <div class="status-title" id="status-title">Оценка: уровень 4G LTE</div>
+          <div class="status-desc" id="status-desc">Спектральная эффективность соответствует современным системам мобильной связи.</div>
+          <div class="bar-container">
+            <div class="bar-fill" id="eta-progress-bar"></div>
+          </div>
+        </div>
+
+        <!-- График C(SNR) -->
+        <div class="canvas-wrapper">
+          <div class="canvas-header">
+            <strong>Зависимость пропускной способности от SNR</strong>
+            <div class="canvas-legend">
+              <span class="legend-item"><span class="legend-box" style="background: var(--primary);"></span> Теор. C</span>
+              <span class="legend-item"><span class="legend-box" style="background: var(--accent-real);"></span> Реальная C</span>
+            </div>
+          </div>
+          <canvas id="snrChart"></canvas>
+        </div>
+
+      </section>
+
+    </div>
+
+    <!-- ТАБЛИЦА И ШПАРГАЛКА -->
+    <div class="grid">
+      
+      <!-- Таблица чувствительности -->
+      <section class="card">
+        <h2>Таблица чувствительности к SNR (B = <span id="table-bw-val">20</span> МГц)</h2>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>SNR (dB)</th>
+                <th>SNR (лин.)</th>
+                <th>η (бит/с/Гц)</th>
+                <th>C теор.</th>
+                <th>C реал.</th>
+              </tr>
+            </thead>
+            <tbody id="snr-table-body">
+              <!-- Заполняется JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Академическая памятка для ответа -->
+      <section class="card">
+        <h2>Теоретическое обоснование</h2>
+        <div class="theory-box">
+          <p><strong>Ключевые закономерности теоремы Шеннона:</strong></p>
+          <ul style="margin-left: 18px; margin-top: 6px; margin-bottom: 12px;">
+            <li><strong>Полоса частот (B):</strong> входит в уравнение <em>линейно</em>. Увеличение полосы в 2 раза дает строго двукратный прирост канальной емкости.</li>
+            <li><strong>Отношение сигнал/шум (SNR):</strong> находится под знаком <em>логарифма</em>. Прибавка каждого дополнительного дБ мощности передатчика дает всё меньший относительный прирост скорости.</li>
+          </ul>
+
+          <p><strong>Типовые значения спектральной эффективности:</strong></p>
+          <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+            <div><span class="badge badge-2g">2G</span> ~2.4 бит/с/Гц (GPRS / EDGE)</div>
+            <div><span class="badge badge-3g">3G</span> ~5.0 бит/с/Гц (HSPA / UMTS)</div>
+            <div><span class="badge badge-4g">4G</span> ~10.0 бит/с/Гц (LTE с MIMO)</div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+  </div>
+
+  <!-- ==========================================
+       ЛОГИКА ПРИЛОЖЕНИЯ (JAVASCRIPT)
+       ========================================== -->
+  <script>
+    // Ссылки на элементы интерфейса
+    const bwRange = document.getElementById('bw-range');
+    const bwNum = document.getElementById('bw-num');
+    const bwValLbl = document.getElementById('bw-val-lbl');
+    const tableBwVal = document.getElementById('table-bw-val');
+
+    const snrRange = document.getElementById('snr-range');
+    const snrNum = document.getElementById('snr-num');
+    const snrValLbl = document.getElementById('snr-val-lbl');
+
+    const kRange = document.getElementById('k-range');
+    const kNum = document.getElementById('k-num');
+    const kValLbl = document.getElementById('k-val-lbl');
+
+    // Элементы вывода
+    const resSnrLin = document.getElementById('res-snr-lin');
+    const resEta = document.getElementById('res-eta');
+    const resCTheor = document.getElementById('res-c-theor');
+    const resCReal = document.getElementById('res-c-real');
+    const statusTitle = document.getElementById('status-title');
+    const statusDesc = document.getElementById('status-desc');
+    const etaProgressBar = document.getElementById('eta-progress-bar');
+    const snrTableBody = document.getElementById('snr-table-body');
+    const canvas = document.getElementById('snrChart');
+    const ctx = canvas.getContext('2d');
+
+    /**
+     * Формула Шеннона-Хартли
+     */
+    function calculateShannon(B_MHz, SNR_dB, k) {
+      const SNR_linear = Math.pow(10, SNR_dB / 10);
+      const C_theor = B_MHz * Math.log2(1 + SNR_linear);
+      const eta = Math.log2(1 + SNR_linear);
+      const C_real = k * C_theor;
+
+      return {
+        SNR_linear,
+        C_theor,
+        eta,
+        C_real
+      };
+    }
+
+    /**
+     * Синхронизация слайдера и числового поля
+     */
+    function syncInputs(source, target) {
+      target.value = source.value;
+      recalculate();
+    }
+
+    bwRange.addEventListener('input', (e) => syncInputs(e.target, bwNum));
+    bwNum.addEventListener('input', (e) => syncInputs(e.target, bwRange));
+
+    snrRange.addEventListener('input', (e) => syncInputs(e.target, snrNum));
+    snrNum.addEventListener('input', (e) => syncInputs(e.target, snrRange));
+
+    kRange.addEventListener('input', (e) => syncInputs(e.target, kNum));
+    kNum.addEventListener('input', (e) => syncInputs(e.target, kRange));
+
+    /**
+     * Пресеты стандартов
+     */
+    function applyPreset(bw, snr, k) {
+      bwRange.value = bw;
+      bwNum.value = bw;
+      snrRange.value = snr;
+      snrNum.value = snr;
+      kRange.value = k;
+      kNum.value = k;
+      recalculate();
+    }
+
+    /**
+     * Форматирование чисел скорости
+     */
+    function formatSpeed(speedMbps) {
+      if (speedMbps >= 1000) {
+        return (speedMbps / 1000).toFixed(2) + ' Гбит/с';
+      }
+      return speedMbps.toFixed(2) + ' Мбит/с';
+    }
+
+    /**
+     * Главный пересчет параметров
+     */
+    function recalculate() {
+      const B_MHz = Math.max(0.001, parseFloat(bwNum.value) || 0.1);
+      const SNR_dB = parseFloat(snrNum.value) || 0;
+      const k = Math.min(1, Math.max(0.01, parseFloat(kNum.value) || 0.5));
+
+      bwValLbl.innerText = B_MHz + ' МГц';
+      tableBwVal.innerText = B_MHz;
+      snrValLbl.innerText = SNR_dB + ' dB';
+      kValLbl.innerText = k.toFixed(2);
+
+      const res = calculateShannon(B_MHz, SNR_dB, k);
+
+      resSnrLin.innerText = res.SNR_linear < 100 ? res.SNR_linear.toFixed(2) : Math.round(res.SNR_linear);
+      resEta.innerText = res.eta.toFixed(2);
+      resCTheor.innerText = formatSpeed(res.C_theor);
+      resCReal.innerText = formatSpeed(res.C_real);
+
+      updateStatus(res.eta);
+      renderTable(B_MHz, k, SNR_dB);
+      drawChart(B_MHz, k, SNR_dB);
+    }
+
+    /**
+     * Оценка эффективности связи
+     */
+    function updateStatus(eta) {
+      let title = "";
+      let desc = "";
+      let progressPercent = Math.min(100, (eta / 12) * 100);
+
+      if (eta < 1.0) {
+        title = "Низкая спектральная эффективность (< 1 бит/с/Гц)";
+        desc = "Шум преобладает над сигналом. Возможна работа только на низкоскоростных схемах модуляции.";
+      } else if (eta < 2.5) {
+        title = "Уровень систем 2G (1–2.5 бит/с/Гц)";
+        desc = "Характерно для голосовых каналов и первых стандартов пакетной передачи данных.";
+      } else if (eta < 5.0) {
+        title = "Уровень систем 3G (2.5–5 бит/с/Гц)";
+        desc = "Типичная спектральная эффективность для WCDMA / HSPA сетей.";
+      } else if (eta <= 10.0) {
+        title = "Уровень систем 4G LTE (5–10 бит/с/Гц)";
+        desc = "Высокоэффективное использование полосы с модуляцией 64QAM/256QAM.";
+      } else {
+        title = "Уровень систем 4G+ / 5G (> 10 бит/с/Гц)";
+        desc = "Сверхвысокая эффективность, достигаемая при высоком SNR и многоантенной технологии MIMO.";
+      }
+
+      statusTitle.innerText = "Оценка: " + title;
+      statusDesc.innerText = desc;
+      etaProgressBar.style.width = progressPercent + '%';
+    }
+
+    /**
+     * Отрисовка таблицы шагов
+     */
+    function renderTable(B_MHz, k, currentSnr) {
+      const snrPoints = [-5, 0, 5, 10, 15, 20, 25, 30, 35];
+      let html = '';
+
+      snrPoints.forEach(snr => {
+        const rowRes = calculateShannon(B_MHz, snr, k);
+        const isActive = Math.abs(snr - currentSnr) < 2.5;
+
+        html += `
+          <tr class="${isActive ? 'active-row' : ''}">
+            <td>${snr} dB</td>
+            <td>${rowRes.SNR_linear.toFixed(1)}</td>
+            <td>${rowRes.eta.toFixed(2)}</td>
+            <td>${formatSpeed(rowRes.C_theor)}</td>
+            <td>${formatSpeed(rowRes.C_real)}</td>
+          </tr>
+        `;
+      });
+
+      snrTableBody.innerHTML = html;
+    }
+
+    /**
+     * График на чистом Canvas в светлой теме
+     */
+    function drawChart(B_MHz, k, currentSnr) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+
+      const width = rect.width;
+      const height = rect.height;
+
+      const padLeft = 50;
+      const padRight = 15;
+      const padTop = 15;
+      const padBottom = 30;
+      const chartW = width - padLeft - padRight;
+      const chartH = height - padTop - padBottom;
+
+      const minSnr = 0;
+      const maxSnr = 35;
+      const maxSpeedCalc = calculateShannon(B_MHz, maxSnr, 1.0).C_theor;
+      const maxY = maxSpeedCalc * 1.1;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Сетка и ось Y
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.fillStyle = '#64748b';
+      ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.lineWidth = 1;
+
+      const yTicks = 4;
+      for (let i = 0; i <= yTicks; i++) {
+        const val = (maxY / yTicks) * i;
+        const y = padTop + chartH - (val / maxY) * chartH;
+        
+        ctx.beginPath();
+        ctx.moveTo(padLeft, y);
+        ctx.lineTo(width - padRight, y);
+        ctx.stroke();
+
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(val), padLeft - 6, y + 4);
+      }
+
+      // Сетка и ось X
+      const xTicks = [0, 5, 10, 15, 20, 25, 30, 35];
+      xTicks.forEach(snr => {
+        const x = padLeft + ((snr - minSnr) / (maxSnr - minSnr)) * chartW;
+        ctx.beginPath();
+        ctx.moveTo(x, padTop);
+        ctx.lineTo(x, height - padBottom);
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.fillText(snr, x, height - padBottom + 16);
+      });
+
+      function getCoords(snr, speed) {
+        const x = padLeft + ((snr - minSnr) / (maxSnr - minSnr)) * chartW;
+        const y = padTop + chartH - (speed / maxY) * chartH;
+        return { x, y };
+      }
+
+      // 1. Кривая теоретической емкости (глубокий синий)
+      ctx.beginPath();
+      ctx.strokeStyle = '#1e40af';
+      ctx.lineWidth = 2;
+      for (let snr = minSnr; snr <= maxSnr; snr += 0.5) {
+        const spd = calculateShannon(B_MHz, snr, 1.0).C_theor;
+        const pt = getCoords(snr, spd);
+        if (snr === minSnr) ctx.moveTo(pt.x, pt.y);
+        else ctx.lineTo(pt.x, pt.y);
+      }
+      ctx.stroke();
+
+      // 2. Кривая реальной скорости (изумрудный)
+      ctx.beginPath();
+      ctx.strokeStyle = '#047857';
+      ctx.lineWidth = 2;
+      for (let snr = minSnr; snr <= maxSnr; snr += 0.5) {
+        const spd = calculateShannon(B_MHz, snr, k).C_real;
+        const pt = getCoords(snr, spd);
+        if (snr === minSnr) ctx.moveTo(pt.x, pt.y);
+        else ctx.lineTo(pt.x, pt.y);
+      }
+      ctx.stroke();
+
+      // 3. Текущая точка на графике
+      if (currentSnr >= minSnr && currentSnr <= maxSnr) {
+        const curRes = calculateShannon(B_MHz, currentSnr, k);
+        const ptTheor = getCoords(currentSnr, curRes.C_theor);
+        const ptReal = getCoords(currentSnr, curRes.C_real);
+
+        // Вертикальная линия текущего SNR
+        ctx.setLineDash([3, 3]);
+        ctx.strokeStyle = '#94a3b8';
+        ctx.beginPath();
+        ctx.moveTo(ptTheor.x, height - padBottom);
+        ctx.lineTo(ptTheor.x, ptTheor.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Маркер теоретической точки
+        ctx.fillStyle = '#1e40af';
+        ctx.beginPath();
+        ctx.arc(ptTheor.x, ptTheor.y, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Маркер реальной точки
+        ctx.fillStyle = '#047857';
+        ctx.beginPath();
+        ctx.arc(ptReal.x, ptReal.y, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Слушатели событий
+    window.addEventListener('resize', recalculate);
+    recalculate();
+  </script>
+</body>
+</html>
